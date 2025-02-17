@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Asteroid Dodge Game - Easy Mode</title>
+  <!-- Include Phaser 3 via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.js"></script>
+  <style>
+    body { 
+      margin: 0; 
+      background: #000; 
+      text-align: center; 
+    }
+    canvas { 
+      display: block; 
+      margin: 0 auto; 
+    }
+    #backButton {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+<script>
+class AsteroidDodgeGame extends Phaser.Scene {
+  constructor() {
+    super("AsteroidDodgeGame");
+  }
+  
+  preload() {
+    // ----- Background (Deep Space) -----
+    let bg = this.make.graphics({ x: 0, y: 0, add: false });
+    bg.fillStyle(0x000010, 1);
+    bg.fillRect(0, 0, 800, 600);
+    bg.generateTexture('spaceBg', 800, 600);
+    bg.destroy();
+    
+    // ----- Twinkling Star Texture -----
+    let starGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+    starGraphics.fillStyle(0xffffff, 1);
+    starGraphics.fillCircle(2, 2, 2);
+    starGraphics.generateTexture('star', 4, 4);
+    starGraphics.destroy();
+    
+    // ----- Player Ship Texture -----
+    let shipGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+    shipGraphics.fillStyle(0x00ccff, 1);
+    shipGraphics.beginPath();
+    // Drawing a refined spaceship (tip at (20,0) on a 40×40 canvas)
+    shipGraphics.moveTo(20, 0);
+    shipGraphics.lineTo(40, 30);
+    shipGraphics.lineTo(30, 40);
+    shipGraphics.lineTo(20, 35);
+    shipGraphics.lineTo(10, 40);
+    shipGraphics.lineTo(0, 30);
+    shipGraphics.closePath();
+    shipGraphics.fillPath();
+    shipGraphics.generateTexture('playerShip', 40, 40);
+    shipGraphics.destroy();
+    
+    // ----- Asteroid Texture -----
+    let asteroidGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+    asteroidGraphics.fillStyle(0x808080, 1);
+    asteroidGraphics.fillCircle(15, 15, 15);
+    asteroidGraphics.generateTexture('asteroid', 30, 30);
+    asteroidGraphics.destroy();
+  }
+  
+  create() {
+    // Add the deep‑space background.
+    this.add.image(400, 300, 'spaceBg');
+    
+    // Create twinkling stars.
+    for (let i = 0; i < 100; i++) {
+      let x = Phaser.Math.Between(0, 800);
+      let y = Phaser.Math.Between(0, 600);
+      let star = this.add.sprite(x, y, 'star');
+      star.alpha = Phaser.Math.FloatBetween(0.3, 1);
+      this.tweens.add({
+        targets: star,
+        alpha: { from: star.alpha, to: Phaser.Math.FloatBetween(0.3, 1) },
+        duration: Phaser.Math.Between(1000, 3000),
+        yoyo: true,
+        repeat: -1,
+        delay: Phaser.Math.Between(0, 1000)
+      });
+    }
+    
+    // Display instructions and timer.
+    this.add.text(20, 20, 
+      "Asteroid Dodge Game - Easy Mode\nDodge rows of asteroids by flying through the gap.\nUse arrow keys to move. Survive 30 seconds to win!",
+      { font: "20px Arial", fill: "#00ffff", stroke: "#000", strokeThickness: 2 }
+    );
+    this.timerText = this.add.text(600, 20, "Time: 0", { font: "20px Arial", fill: "#ffffff" });
+    
+    // Create the player's spaceship near the bottom center.
+    this.player = this.physics.add.sprite(400, 500, 'playerShip');
+    this.player.setCollideWorldBounds(true);
+    this.player.setDamping(true);
+    this.player.setDrag(0.95);
+    this.player.setMaxVelocity(300);
+    
+    // Create a group for the asteroids.
+    this.asteroids = this.physics.add.group();
+    
+    // Collision detection: if the player touches any asteroid, it's game over.
+    this.physics.add.overlap(this.player, this.asteroids, this.playerHit, null, this);
+    
+    // Set up keyboard controls.
+    this.cursors = this.input.keyboard.createCursorKeys();
+    
+    // Spawn a new row of asteroids every 3000 milliseconds (3 seconds) for an easier challenge.
+    this.time.addEvent({
+      delay: 3000,
+      callback: this.spawnAsteroidRow,
+      callbackScope: this,
+      loop: true
+    });
+    
+    // Start the survival timer (30 seconds to win).
+    this.startTime = this.time.now;
+    this.winTime = 30000; // 30 seconds in milliseconds.
+  }
+  
+  spawnAsteroidRow() {
+    // Determine a random gap (safe corridor) in the row.
+    let gapWidth = Phaser.Math.Between(200, 300); // Increased gap width for easier gameplay.
+    let gapStart = Phaser.Math.Between(0, 800 - gapWidth);
+    
+    // Spawn asteroids across the screen in steps of 40 pixels,
+    // except in the gap region.
+    for (let x = 0; x < 800; x += 40) {
+      if (x < gapStart || x > gapStart + gapWidth) {
+        // The +20 centers the asteroid in the 40px segment.
+        let asteroid = this.asteroids.create(x + 20, -30, 'asteroid');
+        asteroid.body.velocity.y = Phaser.Math.Between(100, 150); // Reduced speed for easier dodge.
+      }
+    }
+  }
+  
+  update(time, delta) {
+    // Update the on-screen timer.
+    let elapsed = time - this.startTime;
+    let seconds = Math.floor(elapsed / 1000);
+    this.timerText.setText("Time: " + seconds);
+    if (elapsed >= this.winTime) {
+      this.winGame();
+    }
+    
+    // Handle smooth player movement.
+    const acceleration = 600;
+    if (this.cursors.left.isDown) {
+      this.player.setAccelerationX(-acceleration);
+    } else if (this.cursors.right.isDown) {
+      this.player.setAccelerationX(acceleration);
+    } else {
+      this.player.setAccelerationX(0);
+    }
+    if (this.cursors.up.isDown) {
+      this.player.setAccelerationY(-acceleration);
+    } else if (this.cursors.down.isDown) {
+      this.player.setAccelerationY(acceleration);
+    } else {
+      this.player.setAccelerationY(0);
+    }
+    
+    // Remove asteroids that have moved off the bottom.
+    this.asteroids.children.iterate((asteroid) => {
+      if (asteroid && asteroid.y > 630) {
+        asteroid.destroy();
+      }
+    });
+  }
+  
+  playerHit(player, asteroid) {
+    // Collision: game over.
+    this.physics.pause();
+    player.setTint(0xff0000);
+    this.add.text(300, 300, "Game Over", { font: "40px Arial", fill: "#ff0000" });
+    this.time.delayedCall(2000, () => {
+      this.scene.restart();
+    });
+  }
+  
+  winGame() {
+    // Win condition: surviving 30 seconds.
+    this.physics.pause();
+    this.player.setTint(0x00ff00);
+    this.add.text(150, 300, "You Win! You navigated through the asteroid field!", { font: "40px Arial", fill: "#00ff00" });
+    // Optionally, you can also auto-redirect after winning.
+    // setTimeout(function() {
+    //   window.location.href = "win.html"; // Change as needed.
+    // }, 1000);
+  }
+}
+
+const config = {
+  type: Phaser.AUTO,
+  width: 800,
+  height: 600,
+  backgroundColor: "#000010",
+  physics: {
+    default: "arcade",
+    arcade: { gravity: { y: 0 }, debug: false }
+  },
+  scene: AsteroidDodgeGame
+};
+
+const game = new Phaser.Game(config);
+</script>
+
+<!-- Button below the game that redirects to index.html -->
+<button id="backButton" onclick="window.location.href='index.html'">Return to Index</button>
+</body>
+</html>

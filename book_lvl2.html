@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Page Flip Storybook</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #111010;
+            font-family: 'Georgia', serif;
+            position: relative;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Add background image container */
+        .background-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.5;
+        }
+
+        .background-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .book {
+            position: relative;
+            width: 400px;
+            height: 500px;
+            perspective: 1500px;
+            transform-style: preserve-3d;
+            z-index: 1;
+        }
+
+        .page {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transform-origin: left center;
+            transform-style: preserve-3d;
+            transition: transform 1.2s cubic-bezier(0.645, 0.045, 0.355, 1);
+            cursor: pointer;
+        }
+
+        .page-front, .page-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background: #1a1a2e;
+            color: #e1e1ff;
+            padding: 30px;
+            box-sizing: border-box;
+            backface-visibility: hidden;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 0 5px 5px 0;
+            overflow: hidden;
+            /* border: 2px solid #beff9b */
+        }
+
+        .page-back {
+            transform: rotateY(180deg);
+            background: #1a1a2e;
+        }
+
+        .page.flipped {
+            transform: rotateY(-180deg);
+        }
+
+        .page-content {
+            max-width: 90%;
+            margin: 0 auto;
+            line-height: 1.6;
+            font-size: 18px;
+        }
+
+        .page-number {
+            position: absolute;
+            bottom: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .page-front .page-number {
+            right: 30px;
+        }
+
+        .page-back .page-number {
+            left: 30px;
+        }
+
+        .page:nth-child(1) { z-index: 2; }
+        .page:nth-child(2) { z-index: 1; }
+
+        .page-fold {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to right,
+                rgba(0,0,0,0) 0%,
+                rgba(0,0,0,0.1) 50%,
+                rgba(0,0,0,0) 100%);
+            opacity: 0;
+            transition: opacity 1.2s;
+            pointer-events: none;
+        }
+
+        .page.turning .page-fold {
+            opacity: 1;
+            transition: opacity 0.6s;
+        }
+
+        .book::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 20px;
+            height: 100%;
+            background: #333;
+            transform: translateX(-10px) rotateY(-90deg);
+            transform-origin: right;
+        }
+
+        h1 {
+            color: #76edf3;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .page {
+            transition-timing-function: cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+
+        .page.turning {
+            animation: turnPage 1.2s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+        }
+
+        @keyframes turnPage {
+            0% { transform: rotateY(0); }
+            100% { transform: rotateY(-180deg); }
+        }
+
+        .page.returning {
+            animation: returnPage 1.2s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+        }
+
+        @keyframes returnPage {
+            0% { transform: rotateY(-180deg); }
+            100% { transform: rotateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Add background image container -->
+    <div class="background-container">
+        <img src="images/space.png" alt="Background">
+    </div>
+
+    <div class="book">
+        <!-- Rest of the book content remains the same -->
+        <div class="page">
+            <div class="page-front">
+                <div class="page-content">
+                    <h1>Chapter 2</h1>
+                    <p>The Zorak are mining rare minerals from the asteroid belt to power their war machines. Sergeant Kael Draven leads the Guardians into the asteroid field, where they encounter heavily armed mining ships and automated defense turrets. The Guardians navigate through the dangerous terrain, eventually destroying the mining operations.
+                    </p>
+                    <div class="page-number">1</div>
+                </div>
+            </div>
+            <div class="page-back">
+                <div class="page-content">
+                    <img src="images/level 2.jpg" alt="" style="height: 400px;">
+                    <div class="page-number">2</div>
+                </div>
+            </div>
+            <div class="page-fold"></div>
+        </div>
+        <div class="page">
+            <div class="page-front">
+                <div class="page-content">
+                    <p>
+                        <p>As they complete their mission, Lieutenant Maya Orion uncovers a disturbing piece of intel: the Zorak are searching for an ancient cosmic power. </p>Before they can investigate further, the team receives a distress signal from a stranded Federation ship deep in the Dark Nebula.</p>
+                    <div class="page-number">3</div>
+                </div>
+            </div>
+            <div class="page-back">
+                <div class="page-content">
+                    <img src="images/level 5.2.jpg" alt="" style="height: 400px;">
+                    <div class="page-number">4</div>
+                </div>
+            </div>
+            <div class="page-fold"></div>
+        </div>
+        <div class="page">
+            <div class="page-front">
+                <div class="page-content">
+                    <p><p>In the nebula, the Guardians battle Zorak ambushes and space mines. Engineer Luna Vega uses her advanced sensors to guide them through the disorienting storms.</p> After a daring rescue, the survivors reveal that the Zorak are after an ancient artifact hidden on Terra Nova. Captain Aiden makes the decision to find the artifact before the Zorak do, knowing that it could be humanity's only hope.</p>
+                    <div class="page-number">5</div>
+                </div>
+            </div>
+            <div class="page-back">
+                <div class="page-content">
+                    <p>Objective: Navigate through the asteroid belt to destroy Zorak mining operations. Investigate a mysterious signal in the Dark Nebula and rescue stranded allies.
+                        <br>Start Game 2: <a href="index.html" style="text-decoration: none;color:#76edf3">Game 2: Escape asteroids</a>
+                    </p>
+                    <div class="page-number">6</div>
+                </div>
+            </div>
+            <div class="page-fold"></div>
+        </div>
+    </div>
+
+    <script>
+        const pages = document.querySelectorAll('.page');
+        let currentIndex = 0;
+        let isAnimating = false;
+
+        function updateZIndex() {
+            pages.forEach((page, index) => {
+                if (index < currentIndex) {
+                    page.style.zIndex = index;
+                } else {
+                    page.style.zIndex = pages.length - (index - currentIndex);
+                }
+            });
+        }
+
+        function flipPage(event) {
+            if (isAnimating) return;
+
+            const page = event.target.closest('.page');
+            if (!page) return;
+
+            isAnimating = true;
+            const pageIndex = Array.from(pages).indexOf(page);
+            
+            page.classList.add('turning');
+            
+            if (pageIndex < currentIndex) {
+                currentIndex--;
+                page.classList.add('returning');
+                page.classList.remove('flipped');
+            } else {
+                currentIndex++;
+                page.classList.remove('returning');
+                page.classList.add('flipped');
+            }
+
+            setTimeout(() => {
+                page.classList.remove('turning');
+                page.classList.remove('returning');
+                isAnimating = false;
+                updateZIndex();
+            }, 1200);
+        }
+
+        pages.forEach(page => {
+            page.addEventListener('click', flipPage);
+        });
+
+        // Add keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' && currentIndex < pages.length) {
+                pages[currentIndex].click();
+            } else if (e.key === 'ArrowLeft' && currentIndex > 0) {
+                pages[currentIndex - 1].click();
+            }
+        });
+    </script>
+</body>
+</html>

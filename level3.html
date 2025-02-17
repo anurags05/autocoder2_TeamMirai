@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Space Maze Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: Arial, sans-serif;
+            height: 100vh;
+        }
+        /* Wrapper to stack the game and button vertically */
+        #wrapper {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+        #gameContainer {
+            position: relative;
+            width: 600px;
+            height: 400px;
+            border: 2px solid #444;
+            background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><rect width='400' height='400' fill='%23000'/><circle cx='20' cy='20' r='1' fill='%23FFF' opacity='0.5'/><circle cx='80' cy='50' r='1' fill='%23FFF' opacity='0.6'/><circle cx='150' cy='30' r='1' fill='%23FFF' opacity='0.4'/><circle cx='200' cy='90' r='1' fill='%23FFF' opacity='0.5'/><circle cx='250' cy='140' r='1' fill='%23FFF' opacity='0.6'/><circle cx='300' cy='70' r='1' fill='%23FFF' opacity='0.4'/><circle cx='350' cy='120' r='1' fill='%23FFF' opacity='0.5'/></svg>");
+            background-repeat: repeat;
+            overflow: hidden;
+        }
+        #player {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%23ff0000' d='M12,2L4,22h16L12,2z'/></svg>");
+            background-size: contain;
+            transition: transform 0.1s;
+            z-index: 2;
+        }
+        .asteroid {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%23808080' d='M12,2C6.5,2,2,6.5,2,12s4.5,10,10,10s10-4.5,10-10S17.5,2,12,2z M8,8c1.1,0,2,0.9,2,2s-0.9,2-2,2s-2-0.9-2-2S6.9,8,8,8z M16,16H8v-2h8V16z'/></svg>");
+            background-size: contain;
+            z-index: 1;
+        }
+        .asteroid-small {
+            width: 30px;
+            height: 30px;
+        }
+        #goal {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: radial-gradient(circle, #ff0, #fa0);
+            border-radius: 50%;
+            animation: pulse 1s infinite;
+            z-index: 1;
+        }
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 24px;
+            display: none;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 3;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .stars {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        /* Return to Home Button Styling */
+        #returnHome {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            background: #00ccff;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        #returnHome:hover {
+            background: #0088cc;
+        }
+    </style>
+</head>
+<body>
+    <div id="wrapper">
+        <div id="gameContainer">
+            <div id="player"></div>
+            <div id="goal"></div>
+            <div id="message"></div>
+        </div>
+        <!-- Return to Home button -->
+        <button id="returnHome" onclick="window.location.href='index.html';">Return to Home</button>
+    </div>
+
+    <script>
+        const player = document.getElementById('player');
+        const gameContainer = document.getElementById('gameContainer');
+        const goal = document.getElementById('goal');
+        const message = document.getElementById('message');
+        
+        let playerX = 30;
+        let playerY = 30;
+        const speed = 4;
+        let isGameActive = true;
+        
+        function resetGame() {
+            playerX = 30;
+            playerY = 30;
+            player.style.left = `${playerX}px`;
+            player.style.top = `${playerY}px`;
+            player.style.transform = 'rotate(0deg)';
+            isGameActive = true;
+        }
+        
+        // Set initial player position
+        resetGame();
+        
+        // Set goal position
+        goal.style.left = '530px';
+        goal.style.top = '330px';
+        
+        // Create asteroids with reduced count for medium difficulty
+        const asteroidPositions = [
+            // Main path blockers
+            {x: 150, y: 100}, 
+            {x: 300, y: 200},
+            {x: 450, y: 150},
+            // Additional obstacles
+            {x: 200, y: 300},
+            {x: 350, y: 250},
+            {x: 100, y: 200, small: true},
+            {x: 250, y: 150, small: true},
+            {x: 400, y: 100, small: true},
+            // Narrow passage obstacles
+            {x: 180, y: 350},
+            {x: 380, y: 280}
+        ];
+        
+        asteroidPositions.forEach(pos => {
+            const asteroid = document.createElement('div');
+            asteroid.className = pos.small ? 'asteroid asteroid-small' : 'asteroid';
+            asteroid.style.left = `${pos.x}px`;
+            asteroid.style.top = `${pos.y}px`;
+            gameContainer.appendChild(asteroid);
+        });
+        
+        // Handle keyboard input
+        const keys = {};
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+        });
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+        
+        function checkCollision(x, y) {
+            const playerRect = {
+                left: x,
+                right: x + 40,
+                top: y,
+                bottom: y + 40
+            };
+            
+            // Check boundaries
+            if (x < 0 || x > 560 || y < 0 || y > 360) {
+                return true;
+            }
+            
+            // Check asteroid collisions
+            const asteroids = document.querySelectorAll('.asteroid');
+            for (const asteroid of asteroids) {
+                const asteroidRect = asteroid.getBoundingClientRect();
+                const gameRect = gameContainer.getBoundingClientRect();
+                
+                const relativeRect = {
+                    left: asteroidRect.left - gameRect.left,
+                    right: asteroidRect.right - gameRect.left,
+                    top: asteroidRect.top - gameRect.top,
+                    bottom: asteroidRect.bottom - gameRect.top
+                };
+                
+                if (!(playerRect.right < relativeRect.left || 
+                      playerRect.left > relativeRect.right || 
+                      playerRect.bottom < relativeRect.top || 
+                      playerRect.top > relativeRect.bottom)) {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+        
+        function checkWin(x, y) {
+            const playerRect = {
+                left: x,
+                right: x + 40,
+                top: y,
+                bottom: y + 40
+            };
+            
+            const goalRect = goal.getBoundingClientRect();
+            const gameRect = gameContainer.getBoundingClientRect();
+            
+            const relativeRect = {
+                left: goalRect.left - gameRect.left,
+                right: goalRect.right - gameRect.left,
+                top: goalRect.top - gameRect.top,
+                bottom: goalRect.bottom - gameRect.top
+            };
+            
+            return !(playerRect.right < relativeRect.left || 
+                    playerRect.left > relativeRect.right || 
+                    playerRect.bottom < relativeRect.top || 
+                    playerRect.top > relativeRect.bottom);
+        }
+        
+        function showMessage(text) {
+            message.textContent = text;
+            message.style.display = 'block';
+            setTimeout(() => {
+                message.style.display = 'none';
+            }, 1000);
+        }
+        
+        function handleCollision() {
+            if (isGameActive) {
+                isGameActive = false;
+                showMessage('Collision!');
+                setTimeout(() => {
+                    resetGame();
+                }, 1000);
+            }
+        }
+        
+        function gameLoop() {
+            if (!isGameActive) {
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+            
+            let newX = playerX;
+            let newY = playerY;
+            
+            if (keys['ArrowUp']) newY -= speed;
+            if (keys['ArrowDown']) newY += speed;
+            if (keys['ArrowLeft']) {
+                newX -= speed;
+                player.style.transform = 'rotate(-90deg)';
+            }
+            if (keys['ArrowRight']) {
+                newX += speed;
+                player.style.transform = 'rotate(90deg)';
+            }
+            
+            if (!checkCollision(newX, newY)) {
+                playerX = newX;
+                playerY = newY;
+                player.style.left = `${playerX}px`;
+                player.style.top = `${playerY}px`;
+                
+                if (checkWin(playerX, playerY)) {
+                    showMessage('You Win!');
+                    isGameActive = false;
+                    setTimeout(() => {
+                        resetGame();
+                    }, 1000);
+                }
+            } else {
+                handleCollision();
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        gameLoop();
+    </script>
+</body>
+</html>
